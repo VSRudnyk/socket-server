@@ -13,12 +13,19 @@ const io = socketIo(server, {
   },
 });
 
+io.use((socket, next) => {
+  const username = socket.handshake.auth.username;
+  socket.username = username;
+  next();
+});
+
 const users = {}; // объект для хранения пользователей и их socket.id
 
 io.on('connect', (socket) => {
   socket.on('register', (userId) => {
     users[userId] = socket.id;
     console.log(`User ${userId} registered with socket ID ${socket.id}`);
+    socket.emit('users', users);
   });
 
   // Пример: отправка сообщения определенному пользователю
@@ -26,7 +33,7 @@ io.on('connect', (socket) => {
     const { userId, message } = data;
     const recipientSocketId = users[userId];
     if (recipientSocketId) {
-      io.to(recipientSocketId).emit('message', message);
+      io.to(recipientSocketId).emit('message', data);
       console.log(`Sent message to user ${userId}: ${message}`);
     } else {
       console.log(`User ${userId} not found`);
